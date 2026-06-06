@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build and Deploy Wisecow
 
 on:
   push:
@@ -39,3 +39,18 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl set image deployment/wisecow wisecow=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -n wisecow
+          kubectl rollout status deployment/wisecow -n wisecow
